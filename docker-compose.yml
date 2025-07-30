@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15
+    container_name: annotation_postgres
+    environment:
+      POSTGRES_DB: annotation_db
+      POSTGRES_USER: annotation_user
+      POSTGRES_PASSWORD: annotation_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - annotation_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: annotation_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - annotation_network
+
+  # MinIO 对象存储
+  minio:
+    image: minio/minio:latest
+    container_name: annotation_minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - annotation_network
+
+  # 后端 API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: annotation_backend
+    environment:
+      - DATABASE_URL=postgresql://annotation_user:annotation_password@postgres:5432/annotation_db
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_NAME=annotation-media
+      - SECRET_KEY=your-secret-key-change-in-production
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ./backend:/app
+      - /tmp/annotation:/tmp/annotation
+    networks:
+      - annotation_network
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: annotation_celery_worker
+    environment:
+      - DATABASE_URL=postgresql://annotation_user:annotation_password@postgres:5432/annotation_db
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_NAME=annotation-media
+    command: celery -A app.core.celery_app worker --loglevel=info
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ./backend:/app
+      - /tmp/annotation:/tmp/annotation
+    networks:
+      - annotation_network
+
+  # Celery Beat (定时任务)
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: annotation_celery_beat
+    environment:
+      - DATABASE_URL=postgresql://annotation_user:annotation_password@postgres:5432/annotation_db
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_NAME=annotation-media
+    command: celery -A app.core.celery_app beat --loglevel=info
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ./backend:/app
+    networks:
+      - annotation_network
+
+  # 前端
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: annotation_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - annotation_network
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: annotation_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - annotation_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  annotation_network:
+    driver: bridge
