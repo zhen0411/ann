@@ -1,6 +1,6 @@
 from celery import shared_task
 from app.core.celery_app import celery_app
-from app.core.database import SessionLocal, Annotation, MediaFile, Project
+from app.core.database import SessionLocal, Annotation, MediaFile, Project, Label
 from sqlalchemy import func
 import json
 from datetime import datetime

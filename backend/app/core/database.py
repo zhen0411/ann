@@ -4,9 +4,10 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
 from app.core.config import settings
 import enum
+import os
 
 # 创建数据库引擎
-engine = create_engine(settings.DATABASE_URL)
+engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

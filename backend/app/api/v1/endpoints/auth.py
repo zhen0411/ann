@@ -7,7 +7,7 @@ from datetime import timedelta
 from app.core.database import get_db, User, UserRole
 from app.core.security import (
     authenticate_user, create_access_token, get_password_hash,
-    get_user_by_username, get_user_by_email, create_user
+    get_user_by_username, get_user_by_email, create_user, get_current_user
 )
 from app.core.config import settings
 from app.schemas.auth import Token, UserCreate, UserResponse
@@ -87,7 +87,7 @@ async def register(
     }
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(
+async def get_me(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """获取当前用户信息"""

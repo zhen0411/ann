@@ -4,7 +4,6 @@ from typing import Any, List, Optional
 from app.core.database import get_db, User, Project, ProjectUser, UserRole
 from app.core.security import get_current_user, check_user_permission
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectList
-from app.schemas.user import UserResponse
 
 router = APIRouter()
 

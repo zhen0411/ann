@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { fetchProjects } from '../store/slices/projectsSlice';
+import { useAuth } from '../contexts/AuthContext';
 import {
   FolderIcon,
   VideoCameraIcon,
@@ -13,7 +14,7 @@ import {
 function Dashboard() {
   const dispatch = useDispatch();
   const { projects, loading } = useSelector((state) => state.projects);
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useAuth();
 
   useEffect(() => {
     dispatch(fetchProjects());

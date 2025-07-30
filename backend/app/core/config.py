@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # 数据库配置
-    DATABASE_URL: str = "postgresql://user:password@localhost/annotation_db"
+    DATABASE_URL: str = "sqlite:///./annotation.db"
     
     # Redis配置
     REDIS_URL: str = "redis://localhost:6379"
